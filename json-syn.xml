@@ -1,0 +1,479 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd">
+<?rfc toc="yes"?>
+<?rfc tocompact="yes"?>
+<?rfc tocdepth="3"?>
+<?rfc tocindent="yes"?>
+<?rfc symrefs="yes"?>
+<?rfc sortrefs="yes"?>
+<?rfc comments="yes"?>
+<?rfc inline="yes"?>
+<?rfc compact="yes"?>
+<?rfc subcompact="no"?>
+<rfc category="exp" docName="matkins-json-syn-00" ipr="none">
+  <front>
+    <title abbrev="JSON-Syn">JSON Syndication Format</title>
+
+    <author fullname="Martin Atkins" initials="M." surname="Atkins">
+      <organization></organization>
+    </author>
+
+    <date />
+
+    <abstract>
+      <t>This document specifies a JSON-based web content and metadata
+      syndication format.</t>
+    </abstract>
+
+    <note title="Requirements Language">
+      <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+      "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+      document are to be interpreted as described in <xref
+      target="RFC2119">RFC 2119</xref>.</t>
+    </note>
+  </front>
+
+  <middle>
+    <section title="Introduction">
+      <t>This specification describes a JSON-based data schema that that
+      describes lists of related information known as "feeds". Feeds are
+      composed of a number of items, known as "entries", each with attached
+      metadata. For example, each entry has a title.</t>
+
+      <section title="Notational Conventions">
+        <t>This specification describes conformance in terms of two artifacts:
+        Feed Objects and Entry Objects. Additionally, it places some
+        requirements on Processors.</t>
+
+        <t>This specification is specified in terms of the constructs defined
+        in <xref target="RFC4627"></xref>.</t>
+
+        <t>When describing the structure of a JSON object, a list of the
+        following form will be used:<list style="hanging">
+            <t hangText="title : string">REQUIRED. The title of the entry.</t>
+
+            <t hangText="links : array&lt;Link&gt;">An array of Link objects
+            giving links for which this entry is the source.</t>
+          </list></t>
+
+        <t>The "title : string" notation indicates a property whose value is
+        of type "string". Types that are all lowercase refer to fundamental
+        types defined in <xref target="RFC4627"></xref>. Types that are in
+        CamelCase refer to object types defined within this specification. The
+        notation "array&lt;Link&gt;" indicates a JSON array structure whose
+        members are all of type "Link"; this might be read as "array of Link".
+        The "REQUIRED" prefix on a property indicates that it may not be
+        omitted and must always have a value of the specified type, though
+        unless otherwise stated that value may be the type's empty value.</t>
+
+        <t>Unless otherwise stated, all properties of an object are optional.
+        An omitted property is considered to be equivalent to a property whose
+        value is explicitly given as <spanx style="verb">null</spanx>. <spanx
+        style="verb">null</spanx> is an acceptable value for properties of any
+        type that are not explicitly marked as required.</t>
+
+        <t>The order in which properties are defined is not significant.
+        Publishers may produce objects with properties in any order, but MUST
+        NOT include the same named property more than once within a given
+        object.</t>
+
+        <t>Some properties may be defined as accepting multiple types using
+        the "or" combinator. For example, the type "string or number"
+        indicates that a property may accept either a string or a numeric
+        value.</t>
+
+        <t>The special type "html" is used to describe a JSON string which
+        contains a string of characters that would be valid if used within a
+        DIV container element in an HTML document, as defined by <xref
+        target="HTML5"></xref>. Since JSON strings are strings of unicode
+        characters rather than octets, care may be required in some
+        implementations to ensure that the default character encoding of an
+        HTML parser used to parse the content of such a string is correctly
+        configured to match the encoding of the string in that
+        implementation's internal string representation.</t>
+
+        <t>The special type "time" is used to describe a JSON string which
+        contains a timestamp using the syntax described in <xref
+        target="RFC3339"></xref>. In addition, an uppercase "T" character MUST
+        be used to separate date and time, and an uppercase "Z" character MUST
+        be present in the absence of a numeric time zone offset.</t>
+
+        <t>The special type "iri" is used to describe a JSON string which
+        contains an IRI as defined in <xref target="RFC3987"></xref>. Note
+        that the definition of "IRI" excludes relative references. Though the
+        IRI might use a dereferencable scheme, Atom Processors MUST NOT assume
+        it can be dereferenced. Because of the risk of confusion between IRIs
+        that would be equivalent if they were mapped to URIs and dereferenced,
+        the following normalization strategy SHOULD be applied when generating
+        values for properties of type "iri":<list style="symbols">
+            <t>Provide the scheme in lowercase characters.</t>
+
+            <t>Provide the host, if any, in lowercase characters.</t>
+
+            <t>Only perform percent-encoding where it is essential.</t>
+
+            <t>Use uppercase A through F characters when percent-encoding.</t>
+
+            <t>Prevent dot-segments from appearing in paths.</t>
+
+            <t>For schemes that define a default authority, use an empty
+            authority if the default is desired.</t>
+
+            <t>For schemes that define an empty path to be equivalent to a
+            path of "/", use "/".</t>
+
+            <t>For schemes that define a port, use an empty port if the
+            default is desired.</t>
+
+            <t>Preserve empty fragment identifiers and queries.</t>
+
+            <t>Ensure that all components of the IRI are appropriately
+            character normalized, e.g., by using NFC or NFKC.</t>
+          </list></t>
+
+        <t>The description of a given object or one of its properties may
+        impose additional constraints in addition to those described using
+        this notation.</t>
+      </section>
+
+      <section title="Relationship to the Atom Syndication Format">
+        <t><xref target="RFC4287"></xref> defines an XML-based Document format
+        for representing feeds and entries. This specification is based on the
+        high-level concepts used by the Atom Syndication Format, but it does
+        not attempt to provide a format that can be transformed mechanically
+        to or from Atom without loss.</t>
+
+        <t>The Atom Syndication Format is designed to be extensible via the
+        namespacing features offered by XML. The JSON-based schema defined by
+        this specification is <spanx style="emph">not</spanx> designed to be
+        extensible, instead incorporating some commonly-used extensions into
+        the core specification to cater for common use-cases only. If
+        extensibility is required for a particular application, Atom may be a
+        better choice of representation format for that application.</t>
+      </section>
+    </section>
+
+    <section title="Object Types">
+      <t>The following sections describe the object structures that can be
+      used to represent feeds, entries and other ancillary objects.</t>
+
+      <section title="Item">
+        <t>Item is the abstract supertype of both Feed and Entry. The Item
+        type has the following properties:<list style="hanging">
+            <t hangText="id: iri">REQUIRED. Conveys a permanent, universally
+            unique identifier for a the item. When an item is relocated,
+            migrated, syndicated, republished, exported, or imported, the
+            content of this property MUST NOT change.</t>
+
+            <t hangText="title : html">REQUIRED. Conveys a human-readable
+            title for the item.</t>
+
+            <t hangText="updated : time">Indicates the most recent instant in
+            time when the item was modified in a way the publisher considers
+            significant. Therefore, not all modifications necessarily result
+            in a change to the value of this property.</t>
+
+            <t hangText="author : Person">Indicates the author of the
+            item.</t>
+
+            <t hangText="contributors : array&lt;Person&gt;">Indicates people
+            or other entities who contributed to the item.</t>
+
+            <t hangText="categories : array&lt;Category&gt;">Conveys
+            information about categories associated with the item.</t>
+
+            <t hangText="links : array&lt;Link&gt;">Defines a reference from
+            this item to a web resource.</t>
+          </list></t>
+      </section>
+
+      <section title="Feed">
+        <t>A Feed object represents a feed. The Feed type extends the abstract
+        type "Item" and has the following additional properties:<list
+            style="hanging">
+            <t hangText="entries : array&lt;Entry&gt;">The list of entries
+            that are contained within the feed.</t>
+
+            <t hangText="subtitle : html">Conveys a human-readable description
+            or subtitle for the feed.</t>
+          </list></t>
+      </section>
+
+      <section title="Entry">
+        <t>An Entry object represents an entry. The Entry type extends the
+        abstract type "Item" and has the following additional properties:<list
+            style="hanging">
+            <t hangText="content : html">Conveys the body content of the
+            entry. This is a human-readable representation of the entry that
+            may be presented to a user alongside the entry title, author and
+            links.</t>
+
+            <t hangText="summary : html">Conveys a short summary, abstract, or
+            excerpt of the entry.</t>
+
+            <t hangText="source : Feed">If an entry is copied from one feed to
+            another feed, a copy of the original feed element with the entries
+            property set to <spanx style="verb">null</spanx> SHOULD be
+            provided in the source property in the copy of the entry if the
+            original entry does not already have a value for source.</t>
+
+            <t hangText="inReplyTo : Entry">If present, indicates that that
+            this entry is in response to the entry described by the value. The
+            entry object MAY contain only a subset of the properties of the
+            original entry, and MAY contain a "self" Link indicating a
+            location from which the full representation can be retrieved.</t>
+          </list></t>
+      </section>
+
+      <section title="Person">
+        <t>A Person object represents a person, corporation, or similar
+        entity. The Person type has the following properties:<list
+            style="hanging">
+            <t hangText="displayName : string">Conveys the name of this
+            person, suitable for display to end-users.</t>
+          </list></t>
+      </section>
+
+      <section title="Link">
+        <t>A Link object represents a reference to a Web resource. The Link
+        type has the following properties:<list style="hanging">
+            <t hangText="href : iri">REQUIRED. Gives the IRI of the target
+            resource.</t>
+
+            <t hangText="rel : string">Indicates the link relation type. The
+            value of this element must be valid as the value of the <spanx
+            style="verb">rel</spanx> attribute on the <spanx style="verb">atom:link</spanx>
+            element as described in section 4.2.7.2 of <xref
+            target="RFC4287"></xref>. If this property is omitted it must be
+            processed as if the value were the string "alternate".</t>
+
+            <t hangText="type : string">Indicates an advisory media type. The
+            value is a hint about the type of the representation that is
+            expected to be returned when the value of the href attribute is
+            dereferenced. Note that the type attribute does not override the
+            actual media type returned with the representation. Link elements
+            MAY have a type attribute, whose value MUST conform to the syntax
+            of a MIME media type.</t>
+
+            <t hangText="title : string">Conveys a human-readable title for
+            the link.</t>
+
+            <t hangText="length : number">Indicates an advisory length of the
+            linked content in octets; it is a hint about the content length of
+            the representation returned when the IRI in the href attribute is
+            mapped to a URI and dereferenced. Note that the length attribute
+            does not override the actual content length of the representation
+            as reported by the underlying protocol.</t>
+
+            <t hangText="total : number">When the target resource is of a type
+            that conveys a list of items, such as a serialized Feed object or
+            an Atom Feed Document, indicates the total number of items in the
+            target list.</t>
+
+            <t hangText="width : number">When the target resource is a visual
+            media item, for example if the media type is <spanx style="verb">image/*</spanx>
+            or <spanx style="verb">video/*</spanx>, indicates the item's
+            intrinsic or ideal width in pixels.</t>
+
+            <t hangText="height : number">When the target resource is a visual
+            media item, for example if the media type is <spanx style="verb">image/*</spanx>
+            or <spanx style="verb">video/*</spanx>, indicates the item's
+            intrinsic or ideal height in pixels.</t>
+
+            <t hangText="duration : number">When the target resource is a
+            time-based media item, for example if the media type is <spanx
+            style="verb">video/*</spanx> or <spanx style="verb">audio/*</spanx>,
+            indicates the item's approximate duration in seconds.</t>
+          </list></t>
+      </section>
+    </section>
+
+    <section anchor="IANA" title="IANA Considerations">
+      <t>A Feed object, when serialized to a byte stream using the JSON
+      grammar, can be identified with the following media type:<list
+          style="hanging">
+          <t hangText="MIME Media Type Name">application</t>
+
+          <t hangText="MIME Subtype Name">feed+json</t>
+
+          <t hangText="Required Parameters">none</t>
+
+          <t hangText="Optional Parameters">none</t>
+
+          <t hangText="Encoding Considerations">As defined for
+          application/json in <xref target="RFC4627"></xref>.</t>
+
+          <t hangText="Security Considerations">As defined for
+          application/json in <xref target="RFC4627"></xref>.</t>
+
+          <t hangText="Published Specification">This specification.</t>
+
+          <t hangText="Applications that use this media type">No applications
+          are currently known to use this media type.</t>
+        </list></t>
+
+      <t>An Entry object, when serialized to a byte stream using the JSON
+      grammar, can be identified with the following media type:<list
+          style="hanging">
+          <t hangText="MIME Media Type Name">application</t>
+
+          <t hangText="MIME Subtype Name">entry+json</t>
+
+          <t hangText="Required Parameters">none</t>
+
+          <t hangText="Optional Parameters">none</t>
+
+          <t hangText="Encoding Considerations">As defined for
+          application/json in <xref target="RFC4627"></xref>.</t>
+
+          <t hangText="Security Considerations">As defined for
+          application/json in <xref target="RFC4627"></xref>.</t>
+
+          <t hangText="Published Specification">This specification.</t>
+
+          <t hangText="Applications that use this media type">No applications
+          are currently known to use this media type.</t>
+        </list></t>
+    </section>
+  </middle>
+
+  <back>
+    <references title="Normative References">
+      <reference anchor="RFC2119">
+        <front>
+          <title></title>
+
+          <author>
+            <organization></organization>
+          </author>
+
+          <date />
+        </front>
+      </reference>
+
+      <reference anchor="RFC4627">
+        <front>
+          <title>The application/json Media Type for JavaScript Object
+          Notation (JSON)</title>
+
+          <author fullname="Douglas Crockford" initials="D."
+                  surname="Crockford">
+            <organization>JSON.org</organization>
+          </author>
+
+          <date month="July" year="2006" />
+        </front>
+      </reference>
+
+      <reference anchor="RFC4287">
+        <front>
+          <title>The Atom Syndication Format</title>
+
+          <author fullname="Mark Nottingham" initials="M."
+                  surname="Nottingham">
+            <organization></organization>
+          </author>
+
+          <author fullname="Robert Sayre" initials="R." surname="Sayre">
+            <organization></organization>
+
+            <address>
+              <postal>
+                <street></street>
+
+                <city></city>
+
+                <region></region>
+
+                <code></code>
+
+                <country></country>
+              </postal>
+
+              <phone></phone>
+
+              <facsimile></facsimile>
+
+              <email></email>
+
+              <uri></uri>
+            </address>
+          </author>
+
+          <date month="December" year="2005" />
+        </front>
+      </reference>
+
+      <reference anchor="HTML5">
+        <front>
+          <title>HTML 5</title>
+
+          <author fullname="Ian Hickson" initials="I." surname="Hickson">
+            <organization>Google, Inc.</organization>
+          </author>
+
+          <author fullname="David Hyatt" initials="D." surname="Hyatt">
+            <organization>Apple, Inc.</organization>
+
+            <address>
+              <postal>
+                <street></street>
+
+                <city></city>
+
+                <region></region>
+
+                <code></code>
+
+                <country></country>
+              </postal>
+
+              <phone></phone>
+
+              <facsimile></facsimile>
+
+              <email></email>
+
+              <uri></uri>
+            </address>
+          </author>
+
+          <date day="12" month="February" year="2009" />
+        </front>
+      </reference>
+
+      <reference anchor="RFC3339">
+        <front>
+          <title>Date and Time on the Internet: Timestamps</title>
+
+          <author fullname="Chris Newman" initials="C." surname="Newman">
+            <organization>Sun Microsystems</organization>
+          </author>
+
+          <author fullname="Graham Klyne" initials="G." surname="Klyne">
+            <organization>Clearswift Corporation</organization>
+          </author>
+
+          <date month="July" year="2002" />
+        </front>
+      </reference>
+
+      <reference anchor="RFC3987">
+        <front>
+          <title>Internationalized Resource Identifiers (IRIs)</title>
+
+          <author fullname="Martin D&uuml;erst" initials="M."
+                  surname="D&uuml;erst">
+            <organization>World Wide Web Consortium</organization>
+          </author>
+
+          <author fullname="Michel Suignard" initials="M." surname="Suignard">
+            <organization>Microsoft Corporation</organization>
+          </author>
+
+          <date month="January" year="2005" />
+        </front>
+      </reference>
+    </references>
+  </back>
+</rfc>
